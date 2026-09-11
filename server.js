@@ -32,6 +32,11 @@ app.use(cors({
     'https://www.teflondam.com',
     'https://doctorblade.co.in',
     'https://www.doctorblade.co.in',
+    'https://teflon-dam.vercel.app',
+    'https://doctor-blade.vercel.app',
+    'https://magnetic-ink-mixing-roller.vercel.app',
+    'https://bar-coater.vercel.app',
+    'https://stroboscope-blond.vercel.app',
     /\.vercel\.app$/
   ],
   credentials: true

@@ -50,6 +50,55 @@ const SITES_CONFIG = {
       'lamella-edge-doctor-blade',
     ],
   },
+  // Vercel deployment preview domains
+  'teflon-dam.vercel.app': {
+    name: 'Teflon Dam',
+    domain: 'https://teflon-dam.vercel.app',
+    productSlugs: [
+      'teflon-dam-end-seals',
+      'chamber-doctor-blade-end-seals',
+      'felt-ink-dam-seals',
+      'custom-machined-teflon-seals',
+    ],
+  },
+  'doctor-blade.vercel.app': {
+    name: 'Doctor Blade',
+    domain: 'https://doctor-blade.vercel.app',
+    productSlugs: [
+      'carbon-steel-doctor-blade',
+      'stainless-steel-doctor-blade',
+      'ceramic-coated-doctor-blade',
+      'lamella-edge-doctor-blade',
+    ],
+  },
+  'magnetic-ink-mixing-roller.vercel.app': {
+    name: 'Ink Mixing Roller',
+    domain: 'https://magnetic-ink-mixing-roller.vercel.app',
+    productSlugs: [
+      'magnetic-ink-mixing-roller-with-rope',
+      'wipex-magnetic-ink-mixing-roller-rope-free',
+    ],
+  },
+  'bar-coater.vercel.app': {
+    name: 'Bar Coater',
+    domain: 'https://bar-coater.vercel.app',
+    productSlugs: [
+      'wire-wound-bar-coater',
+      'mayer-rod-coater',
+      'lab-hand-coater',
+      'automatic-film-applicator-coater',
+    ],
+  },
+  'stroboscope-blond.vercel.app': {
+    name: 'Stroboscope Light',
+    domain: 'https://stroboscope-blond.vercel.app',
+    productSlugs: [
+      'xenon-stroboscope-light',
+      'led-stroboscope-light',
+      'portable-rechargeable-stroboscope',
+      'fixed-mount-industrial-stroboscope',
+    ],
+  },
 };
 
 /**
