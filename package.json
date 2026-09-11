@@ -1,7 +1,7 @@
 {
-  "name": "ink-mixing-roller-server",
+  "name": "imagetech-server",
   "version": "1.0.0",
-  "description": "Backend server for Ink Mixing Roller website",
+  "description": "Centralized backend server for ImageTech Industries brand websites (inkmixingroller.com, stroboscopelight.com, barcoater.com, teflondam.com, doctorblade.co.in)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

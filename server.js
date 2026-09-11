@@ -19,26 +19,28 @@ connectDB();
 // Middleware
 app.use(cors({
   origin: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'http://localhost:5174',
-    'https://inkmixingroller.com',
-    'https://www.inkmixingroller.com',
-    'https://stroboscopelight.com',
-    'https://www.stroboscopelight.com',
-    'https://barcoater.com',
-    'https://www.barcoater.com',
-    'https://teflondam.com',
-    'https://www.teflondam.com',
-    'https://doctorblade.co.in',
-    'https://www.doctorblade.co.in',
-    'https://teflon-dam.vercel.app',
-    'https://doctor-blade.vercel.app',
-    'https://magnetic-ink-mixing-roller.vercel.app',
-    'https://bar-coater.vercel.app',
-    'https://stroboscope-blond.vercel.app',
+    process.env.CLIENT_URL,
+    process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, "") : "",
+    "https://inkmixingroller.com",
+    "https://www.inkmixingroller.com",
+    "https://stroboscopelight.com",
+    "https://www.stroboscopelight.com",
+    "https://barcoater.com",
+    "https://www.barcoater.com",
+    "https://teflondam.com",
+    "https://www.teflondam.com",
+    "https://doctorblade.co.in",
+    "https://www.doctorblade.co.in",
+    "https://teflon-dam.vercel.app",
+    "https://doctor-blade.vercel.app",
+    "https://magnetic-ink-mixing-roller.vercel.app",
+    "https://bar-coater.vercel.app",
+    "https://stroboscope-blond.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:3000",
     /\.vercel\.app$/
-  ],
+  ].filter(Boolean),
   credentials: true
 }));
 app.use(express.json());
@@ -58,7 +60,7 @@ app.use('/', sitemapRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Ink Mixing Roller API is running' });
+  res.json({ status: 'ok', message: 'ImageTech Central Multi-Tenant API is running' });
 });
 
 // 404 Handler for unknown API routes

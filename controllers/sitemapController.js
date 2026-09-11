@@ -1,157 +1,105 @@
 const Location = require('../models/Location');
 
-// Multi-tenant configuration mapping each website domain to its base URL & product slugs
-const SITES_CONFIG = {
-  'inkmixingroller.com': {
-    name: 'Ink Mixing Roller',
-    domain: 'https://inkmixingroller.com',
-    productSlugs: [
-      'magnetic-ink-mixing-roller-with-rope',
-      'wipex-magnetic-ink-mixing-roller-rope-free',
-    ],
-  },
-  'stroboscopelight.com': {
-    name: 'Stroboscope Light',
-    domain: 'https://stroboscopelight.com',
-    productSlugs: [
-      'xenon-stroboscope-light',
-      'led-stroboscope-light',
-      'portable-rechargeable-stroboscope',
-      'fixed-mount-industrial-stroboscope',
-    ],
-  },
-  'barcoater.com': {
-    name: 'Bar Coater',
-    domain: 'https://barcoater.com',
-    productSlugs: [
-      'wire-wound-bar-coater',
-      'mayer-rod-coater',
-      'lab-hand-coater',
-      'automatic-film-applicator-coater',
-    ],
-  },
-  'teflondam.com': {
-    name: 'Teflon Dam',
-    domain: 'https://teflondam.com',
-    productSlugs: [
-      'teflon-dam-end-seals',
-      'chamber-doctor-blade-end-seals',
-      'felt-ink-dam-seals',
-      'custom-machined-teflon-seals',
-    ],
-  },
-  'doctorblade.co.in': {
-    name: 'Doctor Blade',
-    domain: 'https://doctorblade.co.in',
-    productSlugs: [
-      'carbon-steel-doctor-blade',
-      'stainless-steel-doctor-blade',
-      'ceramic-coated-doctor-blade',
-      'lamella-edge-doctor-blade',
-    ],
-  },
-  // Vercel deployment preview domains
-  'teflon-dam.vercel.app': {
-    name: 'Teflon Dam',
-    domain: 'https://teflon-dam.vercel.app',
-    productSlugs: [
-      'teflon-dam-end-seals',
-      'chamber-doctor-blade-end-seals',
-      'felt-ink-dam-seals',
-      'custom-machined-teflon-seals',
-    ],
-  },
-  'doctor-blade.vercel.app': {
-    name: 'Doctor Blade',
-    domain: 'https://doctor-blade.vercel.app',
-    productSlugs: [
-      'carbon-steel-doctor-blade',
-      'stainless-steel-doctor-blade',
-      'ceramic-coated-doctor-blade',
-      'lamella-edge-doctor-blade',
-    ],
-  },
-  'magnetic-ink-mixing-roller.vercel.app': {
-    name: 'Ink Mixing Roller',
-    domain: 'https://magnetic-ink-mixing-roller.vercel.app',
-    productSlugs: [
-      'magnetic-ink-mixing-roller-with-rope',
-      'wipex-magnetic-ink-mixing-roller-rope-free',
-    ],
-  },
-  'bar-coater.vercel.app': {
-    name: 'Bar Coater',
-    domain: 'https://bar-coater.vercel.app',
-    productSlugs: [
-      'wire-wound-bar-coater',
-      'mayer-rod-coater',
-      'lab-hand-coater',
-      'automatic-film-applicator-coater',
-    ],
-  },
-  'stroboscope-blond.vercel.app': {
-    name: 'Stroboscope Light',
-    domain: 'https://stroboscope-blond.vercel.app',
-    productSlugs: [
-      'xenon-stroboscope-light',
-      'led-stroboscope-light',
-      'portable-rechargeable-stroboscope',
-      'fixed-mount-industrial-stroboscope',
-    ],
-  },
+// Central product catalog organized by brand category
+const BRAND_PRODUCTS = {
+  'ink-mixing-roller': [
+    'magnetic-ink-mixing-roller-with-rope',
+    'wipex-magnetic-ink-mixing-roller-rope-free',
+  ],
+  'stroboscope': [
+    'xenon-stroboscope-light',
+    'led-stroboscope-light',
+    'portable-rechargeable-stroboscope',
+    'fixed-mount-industrial-stroboscope',
+  ],
+  'bar-coater': [
+    'wire-wound-bar-coater',
+    'mayer-rod-coater',
+    'lab-hand-coater',
+    'automatic-film-applicator-coater',
+  ],
+  'teflon-dam': [
+    'teflon-dam-end-seals',
+    'chamber-doctor-blade-end-seals',
+    'felt-ink-dam-seals',
+    'custom-machined-teflon-seals',
+  ],
+  'doctor-blade': [
+    'carbon-steel-doctor-blade',
+    'stainless-steel-doctor-blade',
+    'ceramic-coated-doctor-blade',
+    'lamella-edge-doctor-blade',
+  ],
 };
 
 /**
- * Resolves the target domain and configuration based on query param or incoming request headers
+ * Uniformly resolves the product slugs for any site:
+ * 1. Query override (?products=slug1,slug2)
+ * 2. Brand category query (?brand=doctor-blade)
+ * 3. Automatic keyword detection from the requesting domain
  */
-const resolveSiteConfig = (req) => {
-  // 1. Check explicit query param (e.g. ?domain=stroboscopelight.com)
-  let requestedDomain = req.query.domain || req.params.domain;
+const resolveProductSlugs = (domain, query = {}) => {
+  if (query.products) {
+    return query.products.split(',').map(s => s.trim()).filter(Boolean);
+  }
 
-  // 2. If not in query, check Referer or Origin header
-  if (!requestedDomain) {
+  if (query.brand && BRAND_PRODUCTS[query.brand]) {
+    return BRAND_PRODUCTS[query.brand];
+  }
+
+  const cleanDomain = domain.toLowerCase();
+  if (cleanDomain.includes('blade')) return BRAND_PRODUCTS['doctor-blade'];
+  if (cleanDomain.includes('dam')) return BRAND_PRODUCTS['teflon-dam'];
+  if (cleanDomain.includes('stroboscope')) return BRAND_PRODUCTS['stroboscope'];
+  if (cleanDomain.includes('coater')) return BRAND_PRODUCTS['bar-coater'];
+  if (cleanDomain.includes('roller') || cleanDomain.includes('mixing')) return BRAND_PRODUCTS['ink-mixing-roller'];
+
+  return [];
+};
+
+/**
+ * Uniformly resolves the base URL for any calling client
+ */
+const resolveBaseUrl = (req) => {
+  // 1. Explicit domain in query or route param: ?domain=... or /sitemaps/:domain.xml
+  let target = req.query.domain || req.query.url || req.params.domain;
+
+  // 2. Detect from Origin or Referer header
+  if (!target) {
     const origin = req.headers.origin || req.headers.referer;
     if (origin) {
       try {
-        requestedDomain = new URL(origin).hostname.replace(/^www\./, '');
+        const parsed = new URL(origin);
+        target = `${parsed.protocol}//${parsed.host}`;
       } catch {}
     }
   }
 
-  // 3. If still not found, check Host or X-Forwarded-Host
-  if (!requestedDomain) {
-    const host = req.headers['x-forwarded-host'] || req.get('host') || '';
-    requestedDomain = host.split(':')[0].replace(/^www\./, '');
+  // 3. Detect from Host header
+  if (!target) {
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+      const proto = req.headers['x-forwarded-proto'] || 'https';
+      target = `${proto}://${host}`;
+    }
   }
 
-  // Normalize requested domain
-  requestedDomain = requestedDomain ? requestedDomain.toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '') : '';
-
-  // Match against known sites
-  if (requestedDomain && SITES_CONFIG[requestedDomain]) {
-    return {
-      key: requestedDomain,
-      ...SITES_CONFIG[requestedDomain],
-    };
+  // 4. Fallback to first CLIENT_URL in .env
+  if (!target && process.env.CLIENT_URL) {
+    target = process.env.CLIENT_URL.split(',')[0].trim();
   }
 
-  // If unknown domain passed via query param, build dynamic config
-  if (requestedDomain && requestedDomain !== 'localhost' && !requestedDomain.includes('127.0.0.1')) {
-    return {
-      key: requestedDomain,
-      name: requestedDomain,
-      domain: `https://${requestedDomain}`,
-      productSlugs: req.query.products ? req.query.products.split(',').map(s => s.trim()) : SITES_CONFIG['inkmixingroller.com'].productSlugs,
-    };
+  if (!target) {
+    target = 'https://imagetechindustries.com';
   }
 
-  // Fallback to default inkmixingroller.com or env
-  const defaultDomain = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : 'https://inkmixingroller.com';
-  return {
-    key: 'inkmixingroller.com',
-    ...SITES_CONFIG['inkmixingroller.com'],
-    domain: defaultDomain,
-  };
+  // Format cleanly
+  target = target.trim().replace(/\/$/, '');
+  if (!/^https?:\/\//i.test(target)) {
+    target = `https://${target}`;
+  }
+
+  return target;
 };
 
 /**
@@ -162,15 +110,11 @@ const resolveSiteConfig = (req) => {
  */
 const getSitemapXml = async (req, res) => {
   try {
-    const siteConfig = resolveSiteConfig(req);
+    const baseUrl = resolveBaseUrl(req);
+    const domainName = new URL(baseUrl).hostname.replace(/^www\./, '');
+    const productSlugs = resolveProductSlugs(domainName, req.query);
     const locations = await Location.find({ isActive: true }).sort({ name: 1 });
-    const baseUrl = siteConfig.domain;
     const today = new Date().toISOString().split('T')[0];
-
-    // Allow override of product slugs via ?products=slug1,slug2
-    const productSlugs = req.query.products
-      ? req.query.products.split(',').map(s => s.trim()).filter(Boolean)
-      : siteConfig.productSlugs;
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
     xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
@@ -220,6 +164,7 @@ const getSitemapXml = async (req, res) => {
 
 module.exports = {
   getSitemapXml,
-  SITES_CONFIG,
+  BRAND_PRODUCTS,
+  resolveBaseUrl,
+  resolveProductSlugs,
 };
-

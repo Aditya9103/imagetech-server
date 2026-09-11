@@ -32,7 +32,7 @@ const submitQuote = async (req, res) => {
       productInterest: productInterest || '',
       industry: industry || '',
       message,
-      sourceWebsite: originSite || 'inkmixingroller.com',
+      sourceWebsite: originSite || 'imagetech',
     });
 
     await submission.save();
@@ -74,7 +74,7 @@ const submitContact = async (req, res) => {
       productInterest: productInterest || '',
       industry: industry || '',
       message,
-      sourceWebsite: originSite || 'inkmixingroller.com',
+      sourceWebsite: originSite || 'imagetech',
     });
 
     await submission.save();
