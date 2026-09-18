@@ -58,7 +58,43 @@ const resolveProductSlugs = (domain, query = {}) => {
 };
 
 /**
- * Uniformly resolves the base URL for any calling client
+ * Normalizes a URL to ensure canonical www format across all custom domains
+ * e.g. https://doctorblade.co.in -> https://www.doctorblade.co.in
+ * e.g. doctorblade.co.in -> https://www.doctorblade.co.in
+ * e.g. https://www.doctorblade.co.in -> https://www.doctorblade.co.in
+ * Preserves localhost, IP addresses, and vercel preview domains (.vercel.app)
+ */
+const formatToWwwUrl = (rawUrl) => {
+  if (!rawUrl) return '';
+  let urlStr = rawUrl.trim().replace(/\/+$/, '');
+  if (!/^https?:\/\//i.test(urlStr)) {
+    urlStr = `https://${urlStr}`;
+  }
+
+  try {
+    const parsed = new URL(urlStr);
+    const hostname = parsed.hostname.toLowerCase();
+
+    // Do not add www to localhost, 127.0.0.1, or .vercel.app preview subdomains
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost');
+    const isVercel = hostname.endsWith('.vercel.app');
+    const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+
+    if (!isLocal && !isVercel && !isIp) {
+      if (!hostname.startsWith('www.')) {
+        parsed.hostname = `www.${hostname}`;
+      }
+      parsed.protocol = 'https:';
+    }
+
+    return parsed.origin;
+  } catch {
+    return urlStr;
+  }
+};
+
+/**
+ * Uniformly resolves the base URL for any calling client in canonical www format
  */
 const resolveBaseUrl = (req) => {
   // 1. Explicit domain in query or route param: ?domain=... or /sitemaps/:domain.xml
@@ -84,26 +120,21 @@ const resolveBaseUrl = (req) => {
     }
   }
 
-  // 4. Fallback to first CLIENT_URL in .env
+  // 4. Fallback to first production domain in CLIENT_URL (.env) or default to imagetechindustries.com
   if (!target && process.env.CLIENT_URL) {
-    target = process.env.CLIENT_URL.split(',')[0].trim();
+    const urls = process.env.CLIENT_URL.split(',').map(u => u.trim());
+    target = urls.find(u => !u.includes('localhost') && !u.includes('127.0.0.1')) || urls[0];
   }
 
   if (!target) {
-    target = 'https://imagetechindustries.com';
+    target = 'https://www.imagetechindustries.com';
   }
 
-  // Format cleanly
-  target = target.trim().replace(/\/$/, '');
-  if (!/^https?:\/\//i.test(target)) {
-    target = `https://${target}`;
-  }
-
-  return target;
+  return formatToWwwUrl(target);
 };
 
 /**
- * @desc    Generate dynamic sitemap.xml for SEO indexing across all websites
+ * @desc    Generate dynamic sitemap.xml for SEO indexing across all websites (canonical www format)
  * @route   GET /sitemap.xml
  * @route   GET /sitemaps/:domain.xml
  * @access  Public
@@ -165,6 +196,7 @@ const getSitemapXml = async (req, res) => {
 module.exports = {
   getSitemapXml,
   BRAND_PRODUCTS,
+  formatToWwwUrl,
   resolveBaseUrl,
   resolveProductSlugs,
 };

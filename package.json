@@ -1,7 +1,7 @@
 {
   "name": "imagetech-server",
   "version": "1.0.0",
-  "description": "Centralized backend server for ImageTech Industries brand websites (inkmixingroller.com, stroboscopelight.com, barcoater.com, teflondam.com, doctorblade.co.in)",
+  "description": "Centralized backend server for ImageTech Industries brand websites (www.inkmixingroller.com, www.stroboscopelight.com, www.barcoater.com, www.teflondam.com, www.doctorblade.co.in)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
