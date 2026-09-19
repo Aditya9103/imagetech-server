@@ -109,30 +109,34 @@ const resolveBaseUrl = (req) => {
       try {
         const parsed = new URL(origin);
         target = `${parsed.protocol}//${parsed.host}`;
-      } catch {}
+      } catch { }
     }
   }
 
-  // 3. Detect from Host header
+  // 3. Detect from Host header (only if host is a real custom website domain, not backend hosting like onrender)
   if (!target) {
     const host = req.headers['x-forwarded-host'] || req.get('host');
-    if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+    if (
+      host &&
+      !host.includes('localhost') &&
+      !host.includes('127.0.0.1') &&
+      !host.includes('onrender.com') &&
+      !host.includes('render.com') &&
+      !host.includes('railway.app') &&
+      !host.includes('fly.dev')
+    ) {
       const proto = req.headers['x-forwarded-proto'] || 'https';
       target = `${proto}://${host}`;
     }
   }
 
-  // 4. Fallback to first production domain in CLIENT_URL (.env) or default to imagetechindustries.com
+  // 4. Fallback to production domain in CLIENT_URL (.env) if valid
   if (!target && process.env.CLIENT_URL) {
     const urls = process.env.CLIENT_URL.split(',').map(u => u.trim());
-    target = urls.find(u => !u.includes('localhost') && !u.includes('127.0.0.1')) || urls[0];
+    target = urls.find(u => !u.includes('localhost') && !u.includes('127.0.0.1') && !u.includes('onrender.com'));
   }
 
-  if (!target) {
-    target = 'https://www.imagetechindustries.com';
-  }
-
-  return formatToWwwUrl(target);
+  return target ? formatToWwwUrl(target) : null;
 };
 
 /**
@@ -143,11 +147,15 @@ const resolveBaseUrl = (req) => {
  */
 const getSitemapXml = async (req, res) => {
   try {
+    const today = new Date().toISOString().split('T')[0];
     const baseUrl = resolveBaseUrl(req);
+
+    if (!baseUrl) {
+      return res.status(400).send('Domain parameter is required (e.g. /sitemap.xml?domain=www.inkmixingroller.com)');
+    }
     const domainName = new URL(baseUrl).hostname.replace(/^www\./, '');
     const productSlugs = resolveProductSlugs(domainName, req.query);
     const locations = await Location.find({ isActive: true }).sort({ name: 1 });
-    const today = new Date().toISOString().split('T')[0];
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
     xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
