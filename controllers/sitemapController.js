@@ -5,6 +5,8 @@ const BRAND_PRODUCTS = {
   'ink-mixing-roller': [
     'magnetic-ink-mixing-roller-with-rope',
     'wipex-magnetic-ink-mixing-roller-rope-free',
+    'aluminium-magnetic-ink-mixing-roller',
+    'spiral-wound-magnetic-ink-mixing-roller',
   ],
   'stroboscope': [
     'xenon-stroboscope-light',
@@ -156,6 +158,10 @@ const getSitemapXml = async (req, res) => {
       '/about',
       '/certifications',
       '/contact',
+      '/selection-guide',
+      '/troubleshooting-guide',
+      '/working-principle',
+      '/press-applications',
       '/privacy-policy',
       '/terms-and-conditions',
       '/shipping-policy',
