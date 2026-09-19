@@ -152,10 +152,19 @@ const getSitemapXml = async (req, res) => {
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
     xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
 
-    // 1. Static pages
-    const staticPages = [
-      '/',
-      '/about',
+    // 1. Primary pages (Home & About)
+    const primaryPages = ['/', '/about'];
+    for (const page of primaryPages) {
+      xml += `  <url>\n    <loc>${baseUrl}${page}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${page === '/' ? '1.0' : '0.8'}</priority>\n  </url>\n`;
+    }
+
+    // 2. Base Product pages (placed immediately after Home & About)
+    for (const slug of productSlugs) {
+      xml += `  <url>\n    <loc>${baseUrl}/products/${slug}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+    }
+
+    // 3. Secondary static pages (Certifications, Contact, Guides, Policies, Sitemap)
+    const secondaryPages = [
       '/certifications',
       '/contact',
       '/selection-guide',
@@ -167,13 +176,8 @@ const getSitemapXml = async (req, res) => {
       '/shipping-policy',
       '/sitemap',
     ];
-    for (const page of staticPages) {
-      xml += `  <url>\n    <loc>${baseUrl}${page}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${page === '/' ? '1.0' : '0.8'}</priority>\n  </url>\n`;
-    }
-
-    // 2. Base Product pages
-    for (const slug of productSlugs) {
-      xml += `  <url>\n    <loc>${baseUrl}/products/${slug}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+    for (const page of secondaryPages) {
+      xml += `  <url>\n    <loc>${baseUrl}${page}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
     }
 
     // 3. Programmatic City pages (/:city)
