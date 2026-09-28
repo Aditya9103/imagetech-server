@@ -1,4 +1,5 @@
 const Location = require('../models/Location');
+const Blog = require('../models/Blog');
 
 // Central product catalog organized by brand category
 const BRAND_PRODUCTS = {
@@ -171,7 +172,20 @@ const getSitemapXml = async (req, res) => {
       xml += `  <url>\n    <loc>${baseUrl}/products/${slug}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
     }
 
-    // 3. Secondary static pages (Certifications, Contact, Guides, Policies, Sitemap)
+    // 3. Blog Hub and individual blog posts (Priority 0.8)
+    xml += `  <url>\n    <loc>${baseUrl}/blog</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+
+    const blogs = await Blog.find({
+      isPublished: true,
+      targetWebsites: { $in: [domainName, 'all'] },
+    }).select('slug updatedAt');
+
+    for (const b of blogs) {
+      const blogDate = (b.updatedAt || new Date()).toISOString().split('T')[0];
+      xml += `  <url>\n    <loc>${baseUrl}/blog/${b.slug}</loc>\n    <lastmod>${blogDate}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+    }
+
+    // 4. Secondary static pages (Certifications, Contact, Guides, Policies, Sitemap)
     const secondaryPages = [
       '/certifications',
       '/contact',
