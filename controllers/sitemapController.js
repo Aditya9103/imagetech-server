@@ -1,7 +1,7 @@
 const Location = require('../models/Location');
 const Blog = require('../models/Blog');
 
-// Central product catalog organized by brand category
+// Central product catalog baseline fallback (synchronized with api.imagetechindustries.com)
 const BRAND_PRODUCTS = {
   'ink-mixing-roller': [
     'magnetic-ink-mixing-roller-with-rope',
@@ -10,54 +10,150 @@ const BRAND_PRODUCTS = {
     'spiral-wound-magnetic-ink-mixing-roller',
   ],
   'stroboscope': [
-    'xenon-stroboscope-light',
-    'led-stroboscope-light',
-    'portable-rechargeable-stroboscope',
-    'fixed-mount-industrial-stroboscope',
+    'led-handheld-model-stroboscope',
+    'led-handheld-model-stroboscope-with-lens',
+    'xenon-flash-tube-hand-held-stroboscope',
+    'u-tube-fixed-model-stroboscope',
+    'xenon-flash-tube-for-stroboscope',
+    'led-fix-model-stroboscope-iti-400',
   ],
   'bar-coater': [
-    'wire-wound-bar-coater',
-    'mayer-rod-coater',
-    'lab-hand-coater',
-    'automatic-film-applicator-coater',
+    'bar-coaters-small-size',
+    'bar-coaters-big-size',
   ],
   'teflon-dam': [
-    'teflon-dam-end-seals',
-    'chamber-doctor-blade-end-seals',
-    'felt-ink-dam-seals',
-    'custom-machined-teflon-seals',
+    'teflon-dam-for-nordmeccanica-super-simplex-super-combi',
+    'teflon-dam-for-pelican',
+    'teflon-dam-for-nordmeccanica-simplex',
+    'teflon-dam-for-sai-converting',
+    'teflon-dam-for-fadia',
+    'teflon-dam-for-mamta-converting',
+    'teflon-dam-for-lotus',
+    'teflon-dam-for-st-engineering',
+    'teflon-dam-for-expert-model-a',
+    'teflon-dam-for-expert-model-b',
+    'teflon-dam-for-canara-flex-model-a',
+    'teflon-dam-for-kohli-210',
+    'teflon-dam-for-kohli-220',
   ],
   'doctor-blade': [
-    'carbon-steel-doctor-blade',
-    'stainless-steel-doctor-blade',
-    'ceramic-coated-doctor-blade',
-    'lamella-edge-doctor-blade',
+    'wipex-carbon-steel-doctor-blade',
+    'wipex-polymer-doctor-blade',
   ],
 };
 
+// Mapping of internal brand keys to ImageTech CMS category slugs
+const BRAND_CATEGORY_MAP = {
+  'ink-mixing-roller': 'magnetic-ink-mixing-rollers',
+  'doctor-blade': 'doctor-blades',
+  'stroboscope': 'stroboscopes',
+  'bar-coater': 'bar-coaters',
+  'teflon-dam': 'teflon-dam',
+};
+
+const IMAGETECH_PRODUCTS_API =
+  process.env.IMAGETECH_API_URL
+    ? `${process.env.IMAGETECH_API_URL.replace(/\/$/, '')}/products`
+    : 'https://api.imagetechindustries.com/api/products';
+
+// In-memory cache for dynamic products (1-hour TTL)
+let productsCache = {
+  data: null,
+  timestamp: 0,
+};
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
 /**
- * Uniformly resolves the product slugs for any site:
- * 1. Query override (?products=slug1,slug2)
- * 2. Brand category query (?brand=doctor-blade)
- * 3. Automatic keyword detection from the requesting domain
+ * Fetch dynamic products from api.imagetechindustries.com with in-memory caching and timeout
  */
-const resolveProductSlugs = (domain, query = {}) => {
+const getDynamicProductsFromApi = async () => {
+  const now = Date.now();
+  if (productsCache.data && now - productsCache.timestamp < CACHE_TTL_MS) {
+    return productsCache.data;
+  }
+
+  try {
+    console.log('[LIVE API] Fetching live products from:', IMAGETECH_PRODUCTS_API);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(IMAGETECH_PRODUCTS_API, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        console.log(`[LIVE API SUCCESS] Successfully loaded ${data.length} live products directly from ImageTech CMS`);
+        productsCache = {
+          data,
+          timestamp: now,
+        };
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch dynamic products from ImageTech API, using fallback:', err.message);
+  }
+
+  return productsCache.data || [];
+};
+
+/**
+ * Dynamically resolves the product slugs for any site:
+ * 1. Query override (?products=slug1,slug2)
+ * 2. Dynamic fetch from https://api.imagetechindustries.com/api/products
+ * 3. Fallback to baseline BRAND_PRODUCTS
+ */
+const resolveProductSlugs = async (domain, query = {}) => {
   if (query.products) {
     return query.products.split(',').map(s => s.trim()).filter(Boolean);
   }
 
+  const cleanDomain = domain.toLowerCase();
+  let brandKey = '';
+
   if (query.brand && BRAND_PRODUCTS[query.brand]) {
-    return BRAND_PRODUCTS[query.brand];
+    brandKey = query.brand;
+  } else if (cleanDomain.includes('blade')) {
+    brandKey = 'doctor-blade';
+  } else if (cleanDomain.includes('dam')) {
+    brandKey = 'teflon-dam';
+  } else if (cleanDomain.includes('stroboscope')) {
+    brandKey = 'stroboscope';
+  } else if (cleanDomain.includes('coater')) {
+    brandKey = 'bar-coater';
+  } else if (cleanDomain.includes('roller') || cleanDomain.includes('mixing')) {
+    brandKey = 'ink-mixing-roller';
   }
 
-  const cleanDomain = domain.toLowerCase();
-  if (cleanDomain.includes('blade')) return BRAND_PRODUCTS['doctor-blade'];
-  if (cleanDomain.includes('dam')) return BRAND_PRODUCTS['teflon-dam'];
-  if (cleanDomain.includes('stroboscope')) return BRAND_PRODUCTS['stroboscope'];
-  if (cleanDomain.includes('coater')) return BRAND_PRODUCTS['bar-coater'];
-  if (cleanDomain.includes('roller') || cleanDomain.includes('mixing')) return BRAND_PRODUCTS['ink-mixing-roller'];
+  const targetCategorySlug = BRAND_CATEGORY_MAP[brandKey];
 
-  return [];
+  // Attempt dynamic fetch from central API
+  if (targetCategorySlug) {
+    try {
+      const allApiProducts = await getDynamicProductsFromApi();
+      if (Array.isArray(allApiProducts) && allApiProducts.length > 0) {
+        const matched = allApiProducts.filter(p => {
+          const catSlug = p.category?.slug || (typeof p.category === 'string' ? p.category : '');
+          const catName = (p.category?.name || '').toLowerCase();
+          return (
+            catSlug === targetCategorySlug ||
+            catSlug.includes(targetCategorySlug) ||
+            catName.includes(brandKey.replace(/-/g, ' '))
+          );
+        });
+
+        const dynamicSlugs = matched.map(p => p.slug).filter(Boolean);
+        if (dynamicSlugs.length > 0) {
+          return dynamicSlugs;
+        }
+      }
+    } catch (e) {
+      console.warn('Error matching dynamic products for sitemap:', e.message);
+    }
+  }
+
+  // Fallback to baseline catalog only if API is completely offline/unreachable
+  return BRAND_PRODUCTS[brandKey] || [];
 };
 
 /**
@@ -155,7 +251,7 @@ const getSitemapXml = async (req, res) => {
       return res.status(400).send('Domain parameter is required (e.g. /sitemap.xml?domain=www.inkmixingroller.com)');
     }
     const domainName = new URL(baseUrl).hostname.replace(/^www\./, '');
-    const productSlugs = resolveProductSlugs(domainName, req.query);
+    const productSlugs = await resolveProductSlugs(domainName, req.query);
     const locations = await Location.find({ isActive: true }).sort({ name: 1 });
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
@@ -177,7 +273,7 @@ const getSitemapXml = async (req, res) => {
 
     const blogs = await Blog.find({
       isPublished: true,
-      targetWebsites: { $in: [domainName, 'all'] },
+      targetWebsites: { $in: [domainName, `www.${domainName}`, 'all'] },
     }).select('slug updatedAt');
 
     for (const b of blogs) {
